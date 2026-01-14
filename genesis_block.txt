@@ -1,0 +1,6 @@
+- Reminder that the system has to:
+   1. pre-seed and create the genesis block
+   2. add to pre-seeded database
+   3. sign and hash the preseeded block
+   4. have a "genesis_block_metadata" object for caching the genesis_block_metadata on the network, via an API endpoint
+

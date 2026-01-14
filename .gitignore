@@ -1,0 +1,125 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+bin/
+*.test
+
+# Test coverage
+*.out
+coverage.out
+coverage.html
+
+# Go workspace file
+go.work
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Data directories
+*.db
+*.sqlite
+*.sqlite3
+data/
+*.log
+
+# Configuration (may contain secrets)
+config.json
+*.key
+*.pem
+.env
+.env.local
+
+# Node modules (if using web frontend)
+node_modules/
+.next/
+.nuxt/
+dist/
+
+# Build artifacts
+build/
+out/
+target/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Wallet files (contain private keys)
+wallets/
+*.wallet
+.afterblock/
+.blueblocks/
+
+# IPFS data
+ipfs/
+.ipfs/
+
+# Database
+db.json
+*.leveldb
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Runtime
+*.pid
+*.seed
+*.pid.lock
+
+# Editor directories and files
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Linux
+*~
+.directory
+.Trash-*
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Certificates
+*.crt
+*.csr
+ssl/
+
+# Backups
+*.bak
+*.backup
+*~
+
+# Keep example configs
+!config.json.example
+!.env.example

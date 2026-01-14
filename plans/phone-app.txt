@@ -1,0 +1,18 @@
+Imagine an app on your phone or a website:
+
+1. login
+2. provider sends request
+3. or you grant access to a provider
+4. you choose what medical records to share
+5. you choose what pharmacy you use and what to share
+6. complete records sent to provider or insurance company or pharmacy
+7. created unified billing
+8. can cut the middle man, insurance company out!
+9. providers can be paid with: credit or stable coins or ecosystem token
+10. Cap: 25 Billion
+   10a. Every provider gets tokens
+   10b. Every hospital gets tokens
+   10c. insurance companies each get 500 tokens for development
+   10d. every patient gets a wallet
+   10e. every medical facility, doctor, hospital lab, gets a wallet
+11. Cap: 25 Billion

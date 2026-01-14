@@ -1,0 +1,18 @@
+What language should we write this in: Go
+What is the domain for this platform: blueblocks.xyz
+Does this domain need to be added to: Oracle Cloud? Yes oci-dns module? yes
+Where we will build: Oracle Cloud
+Where will we run the primary node: internal network host (not public accessible via ssh)
+How does data get to/from secure server: API Server,OIDC,API Keys
+How will users authenticate to the platform that has ccess to the management infrastructure: KeyCloak
+How will engineering authenticate to the backend plaform: Cloudflare Tunnel,SSH, Database Access
+Where will the first node run: Oracle Cloud host
+Where will we get the infrastructure: Use what we already have
+How will commissiions be paid: microtransactions for using the system
+Where will comissions be paid:
+After Block Treasury ETH Address
+After Block Treasury USDC Address
+After Block Treasury Solana Address
+After Block Treasury BTC Address
+After Block Treasury DAO Token: Yes
+Create a Solana wrapped After Block Treasury DAO Token: Yes
