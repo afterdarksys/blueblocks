@@ -1,0 +1,117 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: blueblocks-miner
+  namespace: blueblocks
+  labels:
+    app.kubernetes.io/name: blueblocks
+    app.kubernetes.io/component: miner
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: blueblocks
+      app.kubernetes.io/component: miner
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: blueblocks
+        app.kubernetes.io/component: miner
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9090"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: blueblocks-miner
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: blueblocks
+                    app.kubernetes.io/component: miner
+                topologyKey: kubernetes.io/hostname
+      containers:
+        - name: miner
+          image: blueblocks/miner:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: metrics
+              containerPort: 9090
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: blueblocks-config
+          env:
+            - name: MINER_NODE_RPC
+              value: "http://blueblocks-node:8080"
+            - name: MINER_TREASURY_ADDRESS
+              valueFrom:
+                secretKeyRef:
+                  name: blueblocks-secrets
+                  key: TREASURY_PRIVATE_KEY
+                  optional: true
+          resources:
+            requests:
+              cpu: 2
+              memory: 4Gi
+            limits:
+              cpu: 8
+              memory: 16Gi
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+      volumes:
+        - name: data
+          emptyDir: {}
+      terminationGracePeriodSeconds: 30
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: blueblocks-miner-hpa
+  namespace: blueblocks
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: blueblocks-miner
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+        - type: Pods
+          value: 2
+          periodSeconds: 60
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 120

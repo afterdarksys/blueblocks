@@ -1,0 +1,181 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: blueblocks-node
+  namespace: blueblocks
+  labels:
+    app.kubernetes.io/name: blueblocks
+    app.kubernetes.io/component: monitoring
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: blueblocks
+      app.kubernetes.io/component: node
+  endpoints:
+    - port: metrics
+      interval: 15s
+      path: /metrics
+      scheme: http
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: blueblocks-validator
+  namespace: blueblocks
+  labels:
+    app.kubernetes.io/name: blueblocks
+    app.kubernetes.io/component: monitoring
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: blueblocks
+      app.kubernetes.io/component: validator
+  endpoints:
+    - port: metrics
+      interval: 15s
+      path: /metrics
+      scheme: http
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: blueblocks-miner
+  namespace: blueblocks
+  labels:
+    app.kubernetes.io/name: blueblocks
+    app.kubernetes.io/component: monitoring
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: blueblocks
+      app.kubernetes.io/component: miner
+  endpoints:
+    - port: metrics
+      interval: 15s
+      path: /metrics
+      scheme: http
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: blueblocks-alerts
+  namespace: blueblocks
+  labels:
+    app.kubernetes.io/name: blueblocks
+    app.kubernetes.io/component: monitoring
+spec:
+  groups:
+    - name: blueblocks.rules
+      rules:
+        # Node alerts
+        - alert: BlueBlocksNodeDown
+          expr: up{job="blueblocks-node"} == 0
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "BlueBlocks node is down"
+            description: "Node {{ $labels.instance }} has been down for more than 5 minutes"
+
+        - alert: BlueBlocksNodeHighLatency
+          expr: histogram_quantile(0.99, rate(blueblocks_request_duration_seconds_bucket[5m])) > 2
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High API latency detected"
+            description: "P99 latency is above 2 seconds"
+
+        # Validator alerts
+        - alert: BlueBlocksValidatorDown
+          expr: up{job="blueblocks-validator"} == 0
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "BlueBlocks validator is down"
+            description: "Validator {{ $labels.instance }} has been down for more than 2 minutes"
+
+        - alert: BlueBlocksValidatorMissedBlocks
+          expr: increase(blueblocks_validator_missed_blocks_total[1h]) > 10
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Validator missing blocks"
+            description: "Validator {{ $labels.instance }} has missed more than 10 blocks in the last hour"
+
+        - alert: BlueBlocksLowValidatorCount
+          expr: count(up{job="blueblocks-validator"} == 1) < 3
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Low validator count"
+            description: "Less than 3 validators are online"
+
+        # Chain alerts
+        - alert: BlueBlocksChainStalled
+          expr: increase(blueblocks_block_height[5m]) == 0
+          for: 10m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Chain has stalled"
+            description: "No new blocks produced in the last 10 minutes"
+
+        - alert: BlueBlocksHighPendingTx
+          expr: blueblocks_pending_transactions > 1000
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High pending transaction count"
+            description: "More than 1000 transactions pending in mempool"
+
+        # Resource alerts
+        - alert: BlueBlocksHighMemoryUsage
+          expr: container_memory_usage_bytes{namespace="blueblocks"} / container_spec_memory_limit_bytes{namespace="blueblocks"} > 0.9
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High memory usage"
+            description: "Container {{ $labels.container }} is using more than 90% of memory"
+
+        - alert: BlueBlocksHighCPUUsage
+          expr: rate(container_cpu_usage_seconds_total{namespace="blueblocks"}[5m]) / container_spec_cpu_quota{namespace="blueblocks"} * 100000 > 90
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High CPU usage"
+            description: "Container {{ $labels.container }} is using more than 90% of CPU"
+
+        - alert: BlueBlocksPVCNearFull
+          expr: kubelet_volume_stats_used_bytes{namespace="blueblocks"} / kubelet_volume_stats_capacity_bytes{namespace="blueblocks"} > 0.85
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: "PVC nearly full"
+            description: "PVC {{ $labels.persistentvolumeclaim }} is more than 85% full"
+
+        # Security alerts
+        - alert: BlueBlocksRateLimitExceeded
+          expr: increase(blueblocks_rate_limit_exceeded_total[5m]) > 100
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High rate limit violations"
+            description: "More than 100 rate limit violations in the last 5 minutes"
+
+        - alert: BlueBlocksAuthFailures
+          expr: increase(blueblocks_auth_failures_total[5m]) > 50
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High authentication failure rate"
+            description: "More than 50 authentication failures in the last 5 minutes"

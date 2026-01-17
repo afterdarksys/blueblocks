@@ -1,0 +1,145 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: blueblocks-validator
+  namespace: blueblocks
+  labels:
+    app.kubernetes.io/name: blueblocks
+    app.kubernetes.io/component: validator
+spec:
+  serviceName: blueblocks-validator
+  replicas: 4
+  podManagementPolicy: Parallel
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: blueblocks
+      app.kubernetes.io/component: validator
+  updateStrategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: blueblocks
+        app.kubernetes.io/component: validator
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9090"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: blueblocks-validator
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  app.kubernetes.io/name: blueblocks
+                  app.kubernetes.io/component: validator
+              topologyKey: kubernetes.io/hostname
+      initContainers:
+        - name: init-keys
+          image: blueblocks/validator:latest
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              if [ ! -f /keys/validator.key ]; then
+                echo "Generating validator key..."
+                bblks keys generate --output /keys/validator.key
+              fi
+          volumeMounts:
+            - name: keys
+              mountPath: /keys
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+      containers:
+        - name: validator
+          image: blueblocks/validator:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: validator
+              containerPort: 7777
+              protocol: TCP
+            - name: metrics
+              containerPort: 9090
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: blueblocks-config
+          env:
+            - name: VALIDATOR_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: VALIDATOR_RPC
+              value: "http://blueblocks-node:8080"
+            - name: VALIDATOR_KEY_FILE
+              value: "/keys/validator.key"
+          resources:
+            requests:
+              cpu: 1
+              memory: 2Gi
+            limits:
+              cpu: 4
+              memory: 8Gi
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: keys
+              mountPath: /keys
+              readOnly: true
+          livenessProbe:
+            httpGet:
+              path: /status
+              port: validator
+            initialDelaySeconds: 60
+            periodSeconds: 15
+            timeoutSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /status
+              port: validator
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+      volumes:
+        - name: keys
+          secret:
+            secretName: validator-keys
+            defaultMode: 0400
+      terminationGracePeriodSeconds: 120
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+        labels:
+          app.kubernetes.io/name: blueblocks
+          app.kubernetes.io/component: validator
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: fast-ssd
+        resources:
+          requests:
+            storage: 100Gi
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: blueblocks-validator-pdb
+  namespace: blueblocks
+spec:
+  minAvailable: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: blueblocks
+      app.kubernetes.io/component: validator

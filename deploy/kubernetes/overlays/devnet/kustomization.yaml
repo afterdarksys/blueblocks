@@ -1,0 +1,102 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: blueblocks-devnet
+
+namespace: blueblocks-devnet
+
+resources:
+  - ../../base
+
+namePrefix: devnet-
+
+commonLabels:
+  environment: devnet
+
+patches:
+  # Reduce replicas for devnet
+  - target:
+      kind: Deployment
+      name: blueblocks-node
+    patch: |
+      - op: replace
+        path: /spec/replicas
+        value: 1
+
+  - target:
+      kind: StatefulSet
+      name: blueblocks-validator
+    patch: |
+      - op: replace
+        path: /spec/replicas
+        value: 1
+
+  - target:
+      kind: Deployment
+      name: blueblocks-miner
+    patch: |
+      - op: replace
+        path: /spec/replicas
+        value: 1
+
+  # Reduce resources for devnet
+  - target:
+      kind: Deployment
+      name: blueblocks-node
+    patch: |
+      - op: replace
+        path: /spec/template/spec/containers/0/resources
+        value:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            cpu: 500m
+            memory: 1Gi
+
+  - target:
+      kind: StatefulSet
+      name: blueblocks-validator
+    patch: |
+      - op: replace
+        path: /spec/template/spec/containers/0/resources
+        value:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            cpu: 500m
+            memory: 1Gi
+      - op: replace
+        path: /spec/volumeClaimTemplates/0/spec/resources/requests/storage
+        value: 10Gi
+
+  # Disable PDB for devnet (single replica)
+  - target:
+      kind: PodDisruptionBudget
+    patch: |
+      $patch: delete
+
+  # Disable HPA for devnet
+  - target:
+      kind: HorizontalPodAutoscaler
+    patch: |
+      $patch: delete
+
+configMapGenerator:
+  - name: blueblocks-config
+    behavior: merge
+    literals:
+      - CHAIN_ID=blueblocks-devnet
+      - NETWORK_NAME=BlueBlocks DevNet
+      - LOG_LEVEL=debug
+      - RATE_LIMIT_ENABLED=false
+
+images:
+  - name: blueblocks/node
+    newTag: dev
+  - name: blueblocks/validator
+    newTag: dev
+  - name: blueblocks/miner
+    newTag: dev

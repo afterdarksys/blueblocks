@@ -1,0 +1,122 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: blueblocks-testnet
+
+namespace: blueblocks-testnet
+
+resources:
+  - ../../base
+
+namePrefix: testnet-
+
+commonLabels:
+  environment: testnet
+
+patches:
+  # Testnet-specific replicas
+  - target:
+      kind: Deployment
+      name: blueblocks-node
+    patch: |
+      - op: replace
+        path: /spec/replicas
+        value: 3
+
+  - target:
+      kind: StatefulSet
+      name: blueblocks-validator
+    patch: |
+      - op: replace
+        path: /spec/replicas
+        value: 4
+
+  - target:
+      kind: Deployment
+      name: blueblocks-miner
+    patch: |
+      - op: replace
+        path: /spec/replicas
+        value: 2
+
+  # Testnet resources
+  - target:
+      kind: Deployment
+      name: blueblocks-node
+    patch: |
+      - op: replace
+        path: /spec/template/spec/containers/0/resources
+        value:
+          requests:
+            cpu: 500m
+            memory: 1Gi
+          limits:
+            cpu: 2
+            memory: 4Gi
+
+  - target:
+      kind: StatefulSet
+      name: blueblocks-validator
+    patch: |
+      - op: replace
+        path: /spec/template/spec/containers/0/resources
+        value:
+          requests:
+            cpu: 1
+            memory: 2Gi
+          limits:
+            cpu: 4
+            memory: 8Gi
+      - op: replace
+        path: /spec/volumeClaimTemplates/0/spec/resources/requests/storage
+        value: 50Gi
+
+  # Update Ingress hosts
+  - target:
+      kind: Ingress
+      name: blueblocks-ingress
+    patch: |
+      - op: replace
+        path: /spec/tls/0/hosts
+        value:
+          - api.testnet.blueblocks.xyz
+          - explorer.testnet.blueblocks.xyz
+          - discovery.testnet.blueblocks.xyz
+      - op: replace
+        path: /spec/rules/0/host
+        value: api.testnet.blueblocks.xyz
+      - op: replace
+        path: /spec/rules/1/host
+        value: explorer.testnet.blueblocks.xyz
+      - op: replace
+        path: /spec/rules/2/host
+        value: discovery.testnet.blueblocks.xyz
+
+configMapGenerator:
+  - name: blueblocks-config
+    behavior: merge
+    literals:
+      - CHAIN_ID=blueblocks-testnet
+      - NETWORK_NAME=BlueBlocks TestNet
+      - LOG_LEVEL=info
+      - RATE_LIMIT_ENABLED=true
+      - RATE_LIMIT_PUBLIC_RPM=120
+      - RATE_LIMIT_AUTH_RPM=600
+
+secretGenerator:
+  - name: blueblocks-secrets
+    behavior: merge
+    literals:
+      - DB_USER=blueblocks_testnet
+      - DB_PASSWORD=${DB_PASSWORD}
+      - API_SIGNING_SECRET=${API_SIGNING_SECRET}
+      - ADMIN_API_KEY=${ADMIN_API_KEY}
+
+images:
+  - name: blueblocks/node
+    newTag: v0.1.0-testnet
+  - name: blueblocks/validator
+    newTag: v0.1.0-testnet
+  - name: blueblocks/miner
+    newTag: v0.1.0-testnet

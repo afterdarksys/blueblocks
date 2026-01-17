@@ -1,0 +1,41 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: blueblocks-base
+  annotations:
+    config.kubernetes.io/description: "BlueBlocks blockchain base configuration"
+
+namespace: blueblocks
+
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - secrets.yaml
+  - rbac.yaml
+  - node-deployment.yaml
+  - validator-statefulset.yaml
+  - miner-deployment.yaml
+  - service.yaml
+  - networkpolicy.yaml
+  - ingress.yaml
+  - servicemonitor.yaml
+
+commonLabels:
+  app.kubernetes.io/name: blueblocks
+  app.kubernetes.io/managed-by: kustomize
+  app.kubernetes.io/part-of: blueblocks-platform
+
+configMapGenerator:
+  - name: blueblocks-config
+    behavior: merge
+    literals:
+      - LOG_LEVEL=info
+
+images:
+  - name: blueblocks/node
+    newTag: latest
+  - name: blueblocks/validator
+    newTag: latest
+  - name: blueblocks/miner
+    newTag: latest

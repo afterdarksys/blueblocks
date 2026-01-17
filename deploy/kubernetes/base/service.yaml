@@ -1,0 +1,121 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: blueblocks-node
+  namespace: blueblocks
+  labels:
+    app.kubernetes.io/name: blueblocks
+    app.kubernetes.io/component: node
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+      protocol: TCP
+    - name: p2p
+      port: 26656
+      targetPort: p2p
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: blueblocks
+    app.kubernetes.io/component: node
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: blueblocks-node-lb
+  namespace: blueblocks
+  labels:
+    app.kubernetes.io/name: blueblocks
+    app.kubernetes.io/component: node
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
+spec:
+  type: LoadBalancer
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: blueblocks
+    app.kubernetes.io/component: node
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: blueblocks-validator
+  namespace: blueblocks
+  labels:
+    app.kubernetes.io/name: blueblocks
+    app.kubernetes.io/component: validator
+spec:
+  type: ClusterIP
+  clusterIP: None  # Headless service for StatefulSet
+  ports:
+    - name: validator
+      port: 7777
+      targetPort: validator
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: blueblocks
+    app.kubernetes.io/component: validator
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: blueblocks-discovery
+  namespace: blueblocks
+  labels:
+    app.kubernetes.io/name: blueblocks
+    app.kubernetes.io/component: discovery
+spec:
+  type: ClusterIP
+  ports:
+    - name: https
+      port: 8443
+      targetPort: https
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: blueblocks
+    app.kubernetes.io/component: discovery
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: timescaledb
+  namespace: blueblocks
+  labels:
+    app.kubernetes.io/name: blueblocks
+    app.kubernetes.io/component: timescaledb
+spec:
+  type: ClusterIP
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: postgres
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: blueblocks
+    app.kubernetes.io/component: timescaledb
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: blueblocks-explorer
+  namespace: blueblocks
+  labels:
+    app.kubernetes.io/name: blueblocks
+    app.kubernetes.io/component: explorer
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 3000
+      targetPort: http
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: blueblocks
+    app.kubernetes.io/component: explorer

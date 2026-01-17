@@ -1,0 +1,287 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: blueblocks-default-deny
+  namespace: blueblocks
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: blueblocks-node-policy
+  namespace: blueblocks
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: blueblocks
+      app.kubernetes.io/component: node
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow from validators
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: validator
+      ports:
+        - protocol: TCP
+          port: 8080
+    # Allow from miners
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: miner
+      ports:
+        - protocol: TCP
+          port: 8080
+    # Allow from indexer
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: indexer
+      ports:
+        - protocol: TCP
+          port: 8080
+    # Allow from explorer
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: explorer
+      ports:
+        - protocol: TCP
+          port: 8080
+    # Allow from ingress controller
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 8080
+    # Allow P2P traffic from other nodes
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: node
+      ports:
+        - protocol: TCP
+          port: 26656
+    # Allow Prometheus scraping
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+      ports:
+        - protocol: TCP
+          port: 9090
+  egress:
+    # Allow DNS
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+    # Allow to validators
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: validator
+      ports:
+        - protocol: TCP
+          port: 7777
+    # Allow P2P to other nodes
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: node
+      ports:
+        - protocol: TCP
+          port: 26656
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: blueblocks-validator-policy
+  namespace: blueblocks
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: blueblocks
+      app.kubernetes.io/component: validator
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow from other validators
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: validator
+      ports:
+        - protocol: TCP
+          port: 7777
+    # Allow Prometheus scraping
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+      ports:
+        - protocol: TCP
+          port: 9090
+  egress:
+    # Allow DNS
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+    # Allow to nodes
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: node
+      ports:
+        - protocol: TCP
+          port: 8080
+    # Allow to other validators
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: validator
+      ports:
+        - protocol: TCP
+          port: 7777
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: blueblocks-miner-policy
+  namespace: blueblocks
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: blueblocks
+      app.kubernetes.io/component: miner
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow Prometheus scraping
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+      ports:
+        - protocol: TCP
+          port: 9090
+  egress:
+    # Allow DNS
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+    # Allow to nodes
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: node
+      ports:
+        - protocol: TCP
+          port: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: blueblocks-timescaledb-policy
+  namespace: blueblocks
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: blueblocks
+      app.kubernetes.io/component: timescaledb
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow from indexer only
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: indexer
+      ports:
+        - protocol: TCP
+          port: 5432
+    # Allow from explorer
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: explorer
+      ports:
+        - protocol: TCP
+          port: 5432
+  egress:
+    # Allow DNS
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: blueblocks-discovery-policy
+  namespace: blueblocks
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: blueblocks
+      app.kubernetes.io/component: discovery
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow from ingress controller
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 8443
+    # Allow Prometheus scraping
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+      ports:
+        - protocol: TCP
+          port: 9090
+  egress:
+    # Allow DNS
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53

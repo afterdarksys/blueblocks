@@ -1,0 +1,85 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: blueblocks-config
+  namespace: blueblocks
+  labels:
+    app.kubernetes.io/name: blueblocks
+    app.kubernetes.io/component: config
+data:
+  # Chain configuration
+  CHAIN_ID: "blueblocks-testnet"
+  NETWORK_NAME: "BlueBlocks TestNet"
+
+  # Node configuration
+  NODE_LISTEN: "0.0.0.0:8080"
+  NODE_DATA_DIR: "/data"
+
+  # Validator configuration
+  VALIDATOR_PORT: "7777"
+  VALIDATOR_TYPE: "standard"
+
+  # Miner configuration
+  MINER_WORKERS: "4"
+  MINER_DIFFICULTY: "4"
+
+  # Discovery service
+  DISCOVERY_LISTEN: "0.0.0.0:8443"
+  DISCOVERY_SESSION_TTL: "3600"
+  DISCOVERY_HEARTBEAT_TIMEOUT: "60"
+
+  # Indexer configuration
+  INDEXER_DB_HOST: "timescaledb"
+  INDEXER_DB_PORT: "5432"
+  INDEXER_DB_NAME: "blueblocks_indexer"
+
+  # Rate limiting
+  RATE_LIMIT_ENABLED: "true"
+  RATE_LIMIT_PUBLIC_RPM: "60"
+  RATE_LIMIT_AUTH_RPM: "300"
+  RATE_LIMIT_DEPLOY_RPH: "10"
+
+  # Logging
+  LOG_LEVEL: "info"
+  LOG_FORMAT: "json"
+
+  # HIPAA compliance
+  AUDIT_LOG_ENABLED: "true"
+  PHI_ACCESS_TRACKING: "true"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: blueblocks-genesis
+  namespace: blueblocks
+  labels:
+    app.kubernetes.io/name: blueblocks
+    app.kubernetes.io/component: genesis
+data:
+  genesis.json: |
+    {
+      "chain_id": "blueblocks-testnet",
+      "genesis_time": "2026-01-16T00:00:00Z",
+      "initial_height": 0,
+      "consensus": {
+        "block_time": "5s",
+        "max_block_size": 1048576,
+        "min_validators": 3,
+        "max_validators": 100
+      },
+      "accounts": {
+        "treasury": {
+          "address": "bb1treasury0000000000000000000000000000",
+          "balance": "1000000000000000"
+        },
+        "faucet": {
+          "address": "bb1faucet00000000000000000000000000000",
+          "balance": "100000000000000"
+        }
+      },
+      "validators": [],
+      "staking": {
+        "min_stake": "100000000000",
+        "unbonding_period": "604800s"
+      }
+    }

@@ -1,0 +1,182 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: blueblocks-mainnet
+
+namespace: blueblocks-mainnet
+
+resources:
+  - ../../base
+
+namePrefix: mainnet-
+
+commonLabels:
+  environment: mainnet
+
+patches:
+  # Mainnet-specific replicas (high availability)
+  - target:
+      kind: Deployment
+      name: blueblocks-node
+    patch: |
+      - op: replace
+        path: /spec/replicas
+        value: 5
+
+  - target:
+      kind: StatefulSet
+      name: blueblocks-validator
+    patch: |
+      - op: replace
+        path: /spec/replicas
+        value: 7
+
+  - target:
+      kind: Deployment
+      name: blueblocks-miner
+    patch: |
+      - op: replace
+        path: /spec/replicas
+        value: 3
+
+  # Production resources
+  - target:
+      kind: Deployment
+      name: blueblocks-node
+    patch: |
+      - op: replace
+        path: /spec/template/spec/containers/0/resources
+        value:
+          requests:
+            cpu: 2
+            memory: 4Gi
+          limits:
+            cpu: 4
+            memory: 8Gi
+
+  - target:
+      kind: StatefulSet
+      name: blueblocks-validator
+    patch: |
+      - op: replace
+        path: /spec/template/spec/containers/0/resources
+        value:
+          requests:
+            cpu: 2
+            memory: 4Gi
+          limits:
+            cpu: 8
+            memory: 16Gi
+      - op: replace
+        path: /spec/volumeClaimTemplates/0/spec/resources/requests/storage
+        value: 500Gi
+      - op: replace
+        path: /spec/volumeClaimTemplates/0/spec/storageClassName
+        value: premium-ssd
+
+  - target:
+      kind: Deployment
+      name: blueblocks-miner
+    patch: |
+      - op: replace
+        path: /spec/template/spec/containers/0/resources
+        value:
+          requests:
+            cpu: 4
+            memory: 8Gi
+          limits:
+            cpu: 16
+            memory: 32Gi
+
+  # Update PDB for higher availability
+  - target:
+      kind: PodDisruptionBudget
+      name: blueblocks-node-pdb
+    patch: |
+      - op: replace
+        path: /spec/minAvailable
+        value: 4
+
+  - target:
+      kind: PodDisruptionBudget
+      name: blueblocks-validator-pdb
+    patch: |
+      - op: replace
+        path: /spec/minAvailable
+        value: 5
+
+  # Update HPA for mainnet
+  - target:
+      kind: HorizontalPodAutoscaler
+      name: blueblocks-miner-hpa
+    patch: |
+      - op: replace
+        path: /spec/minReplicas
+        value: 3
+      - op: replace
+        path: /spec/maxReplicas
+        value: 20
+
+  # Update Ingress hosts for mainnet
+  - target:
+      kind: Ingress
+      name: blueblocks-ingress
+    patch: |
+      - op: replace
+        path: /spec/tls/0/hosts
+        value:
+          - api.blueblocks.xyz
+          - explorer.blueblocks.xyz
+          - discovery.blueblocks.xyz
+      - op: replace
+        path: /spec/rules/0/host
+        value: api.blueblocks.xyz
+      - op: replace
+        path: /spec/rules/1/host
+        value: explorer.blueblocks.xyz
+      - op: replace
+        path: /spec/rules/2/host
+        value: discovery.blueblocks.xyz
+
+  # Stricter network policies for mainnet
+  - target:
+      kind: NetworkPolicy
+      name: blueblocks-default-deny
+    patch: |
+      - op: add
+        path: /metadata/annotations
+        value:
+          description: "Mainnet strict deny-all policy"
+
+configMapGenerator:
+  - name: blueblocks-config
+    behavior: merge
+    literals:
+      - CHAIN_ID=blueblocks-mainnet
+      - NETWORK_NAME=BlueBlocks MainNet
+      - LOG_LEVEL=warn
+      - RATE_LIMIT_ENABLED=true
+      - RATE_LIMIT_PUBLIC_RPM=60
+      - RATE_LIMIT_AUTH_RPM=300
+      - RATE_LIMIT_DEPLOY_RPH=5
+      - AUDIT_LOG_ENABLED=true
+      - PHI_ACCESS_TRACKING=true
+
+secretGenerator:
+  - name: blueblocks-secrets
+    behavior: merge
+    literals:
+      - DB_USER=blueblocks_mainnet
+      - DB_PASSWORD=${DB_PASSWORD}
+      - API_SIGNING_SECRET=${API_SIGNING_SECRET}
+      - ADMIN_API_KEY=${ADMIN_API_KEY}
+      - TREASURY_PRIVATE_KEY=${TREASURY_PRIVATE_KEY}
+
+images:
+  - name: blueblocks/node
+    newTag: v1.0.0
+  - name: blueblocks/validator
+    newTag: v1.0.0
+  - name: blueblocks/miner
+    newTag: v1.0.0
