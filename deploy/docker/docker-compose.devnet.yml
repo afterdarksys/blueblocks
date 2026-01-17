@@ -1,0 +1,96 @@
+# BlueBlocks DevNet - Local Development Network
+# Single-node setup for development and testing
+#
+# Usage:
+#   docker-compose -f docker-compose.devnet.yml up -d
+#   docker-compose -f docker-compose.devnet.yml logs -f
+#   docker-compose -f docker-compose.devnet.yml down -v
+
+version: '3.8'
+
+services:
+  # Primary Node - HTTP API Server
+  node:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile.node
+    container_name: blueblocks-devnet-node
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - BLUEBLOCKS_CHAIN_ID=blueblocks-devnet
+      - BLUEBLOCKS_DATA_DIR=/data
+      - BLUEBLOCKS_LISTEN=0.0.0.0:8080
+      - BLUEBLOCKS_LOG_LEVEL=debug
+      - BLUEBLOCKS_CORS_ENABLED=true
+      - BLUEBLOCKS_CORS_ORIGINS=*
+    volumes:
+      - devnet-node-data:/data
+      - ./configs/devnet/genesis.json:/config/genesis.json:ro
+    networks:
+      - blueblocks-devnet
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Miner - Block Production
+  miner:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile.miner
+    container_name: blueblocks-devnet-miner
+    restart: unless-stopped
+    depends_on:
+      node:
+        condition: service_healthy
+    environment:
+      - MINER_DATA_DIR=/data
+      - MINER_WORKERS=2
+      - MINER_DIFFICULTY=2
+      - MINER_REWARD=50000000
+      - MINER_NODE_RPC=http://node:8080
+      - MINER_TREASURY=${DEVNET_TREASURY_ADDRESS:-bb0000000000000000000000000000000000000001}
+    volumes:
+      - devnet-miner-data:/data
+    networks:
+      - blueblocks-devnet
+
+  # Single Validator for DevNet
+  validator:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile.validator
+    container_name: blueblocks-devnet-validator
+    restart: unless-stopped
+    depends_on:
+      node:
+        condition: service_healthy
+    ports:
+      - "7777:7777"
+    environment:
+      - VALIDATOR_DATA_DIR=/data
+      - VALIDATOR_PORT=7777
+      - VALIDATOR_TYPE=standard
+      - VALIDATOR_RPC=http://node:8080
+      - VALIDATOR_STAKE=10000
+    volumes:
+      - devnet-validator-data:/data
+      - devnet-validator-keys:/keys
+    networks:
+      - blueblocks-devnet
+
+networks:
+  blueblocks-devnet:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+
+volumes:
+  devnet-node-data:
+  devnet-miner-data:
+  devnet-validator-data:
+  devnet-validator-keys:

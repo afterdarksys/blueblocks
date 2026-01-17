@@ -1,0 +1,54 @@
+# BlueBlocks Discovery Service Dockerfile
+# HTTPS endpoint for P2P peer registration, heartbeats, and routing
+
+FROM golang:1.24-alpine AS builder
+
+# Install build dependencies
+RUN apk add --no-cache git make gcc musl-dev
+
+WORKDIR /build
+
+# Copy go mod files first for better caching
+COPY preapproved-implementations/go.mod preapproved-implementations/go.sum ./
+RUN go mod download
+
+# Copy source code
+COPY preapproved-implementations/ .
+
+# Build the discovery service
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /bin/discovery-service ./cmd/discovery-service
+
+# Runtime image
+FROM alpine:3.19
+
+RUN apk add --no-cache ca-certificates tzdata
+
+# Create non-root user
+RUN addgroup -S blueblocks && adduser -S blueblocks -G blueblocks
+
+# Copy binary
+COPY --from=builder /bin/discovery-service /usr/local/bin/
+
+# Create directories
+RUN mkdir -p /data /certs && chown -R blueblocks:blueblocks /data /certs
+
+USER blueblocks
+
+WORKDIR /data
+
+# Default environment variables
+ENV DISCOVERY_LISTEN=0.0.0.0:8443
+ENV DISCOVERY_DATA_DIR=/data
+ENV DISCOVERY_SESSION_TTL=3600
+ENV DISCOVERY_HEARTBEAT_TIMEOUT=60
+ENV DISCOVERY_TLS_CERT=/certs/tls.crt
+ENV DISCOVERY_TLS_KEY=/certs/tls.key
+
+EXPOSE 8443
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD wget -qO- --no-check-certificate https://localhost:8443/health || exit 1
+
+ENTRYPOINT ["discovery-service"]
+CMD ["--listen", "0.0.0.0:8443"]

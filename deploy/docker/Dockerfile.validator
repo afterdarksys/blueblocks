@@ -1,0 +1,56 @@
+# BlueBlocks Validator Node Dockerfile
+# Runs the bblks-validator daemon for consensus participation
+
+FROM golang:1.24-alpine AS builder
+
+# Install build dependencies
+RUN apk add --no-cache git make gcc musl-dev
+
+WORKDIR /build
+
+# Copy go mod files first for better caching
+COPY preapproved-implementations/go.mod preapproved-implementations/go.sum ./
+RUN go mod download
+
+# Copy source code
+COPY preapproved-implementations/ .
+
+# Build the validator daemon
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /bin/bblks-validator ./cmd/bblks-validator
+
+# Build the CLI tool for management
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /bin/bblks ./cmd/bblks
+
+# Runtime image
+FROM alpine:3.19
+
+RUN apk add --no-cache ca-certificates tzdata
+
+# Create non-root user
+RUN addgroup -S blueblocks && adduser -S blueblocks -G blueblocks
+
+# Copy binaries
+COPY --from=builder /bin/bblks-validator /usr/local/bin/
+COPY --from=builder /bin/bblks /usr/local/bin/
+
+# Create data directories
+RUN mkdir -p /data /keys && chown -R blueblocks:blueblocks /data /keys
+
+USER blueblocks
+
+WORKDIR /data
+
+# Default environment variables
+ENV VALIDATOR_DATA_DIR=/data
+ENV VALIDATOR_PORT=7777
+ENV VALIDATOR_TYPE=standard
+ENV VALIDATOR_RPC=http://node:8080
+
+EXPOSE 7777
+
+# Health check via validator status endpoint
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+    CMD wget -qO- http://localhost:7777/status || exit 1
+
+ENTRYPOINT ["bblks-validator"]
+CMD ["--data-dir", "/data", "--port", "7777", "--rpc", "http://node:8080"]

@@ -1,0 +1,402 @@
+# BlueBlocks TestNet - Multi-Node Test Network
+# Production-like setup with multiple validators
+#
+# Usage:
+#   docker-compose -f docker-compose.testnet.yml up -d
+#   docker-compose -f docker-compose.testnet.yml logs -f
+#   docker-compose -f docker-compose.testnet.yml down -v
+
+version: '3.8'
+
+services:
+  # ============================================
+  # CORE INFRASTRUCTURE
+  # ============================================
+
+  # Primary Node (Seed Node)
+  node-1:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile.node
+    container_name: blueblocks-testnet-node-1
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - BLUEBLOCKS_CHAIN_ID=blueblocks-testnet
+      - BLUEBLOCKS_DATA_DIR=/data
+      - BLUEBLOCKS_LISTEN=0.0.0.0:8080
+      - BLUEBLOCKS_LOG_LEVEL=info
+      - BLUEBLOCKS_CORS_ENABLED=true
+      - BLUEBLOCKS_CORS_ORIGINS=*
+      - BLUEBLOCKS_PEERS=node-2:8080,node-3:8080
+    volumes:
+      - testnet-node-1-data:/data
+      - ../configs/testnet/genesis.json:/config/genesis.json:ro
+    networks:
+      - blueblocks-testnet
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  # Secondary Node
+  node-2:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile.node
+    container_name: blueblocks-testnet-node-2
+    restart: unless-stopped
+    depends_on:
+      node-1:
+        condition: service_healthy
+    ports:
+      - "8081:8080"
+    environment:
+      - BLUEBLOCKS_CHAIN_ID=blueblocks-testnet
+      - BLUEBLOCKS_DATA_DIR=/data
+      - BLUEBLOCKS_LISTEN=0.0.0.0:8080
+      - BLUEBLOCKS_LOG_LEVEL=info
+      - BLUEBLOCKS_SEED_NODE=node-1:8080
+      - BLUEBLOCKS_PEERS=node-1:8080,node-3:8080
+    volumes:
+      - testnet-node-2-data:/data
+      - ../configs/testnet/genesis.json:/config/genesis.json:ro
+    networks:
+      - blueblocks-testnet
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  # Tertiary Node
+  node-3:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile.node
+    container_name: blueblocks-testnet-node-3
+    restart: unless-stopped
+    depends_on:
+      node-1:
+        condition: service_healthy
+    ports:
+      - "8082:8080"
+    environment:
+      - BLUEBLOCKS_CHAIN_ID=blueblocks-testnet
+      - BLUEBLOCKS_DATA_DIR=/data
+      - BLUEBLOCKS_LISTEN=0.0.0.0:8080
+      - BLUEBLOCKS_LOG_LEVEL=info
+      - BLUEBLOCKS_SEED_NODE=node-1:8080
+      - BLUEBLOCKS_PEERS=node-1:8080,node-2:8080
+    volumes:
+      - testnet-node-3-data:/data
+      - ../configs/testnet/genesis.json:/config/genesis.json:ro
+    networks:
+      - blueblocks-testnet
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  # ============================================
+  # VALIDATORS (BFT Consensus)
+  # ============================================
+
+  validator-1:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile.validator
+    container_name: blueblocks-testnet-validator-1
+    restart: unless-stopped
+    depends_on:
+      node-1:
+        condition: service_healthy
+    ports:
+      - "7777:7777"
+    environment:
+      - VALIDATOR_DATA_DIR=/data
+      - VALIDATOR_PORT=7777
+      - VALIDATOR_TYPE=standard
+      - VALIDATOR_RPC=http://node-1:8080
+      - VALIDATOR_STAKE=25000
+      - VALIDATOR_ID=validator-1
+    volumes:
+      - testnet-validator-1-data:/data
+      - testnet-validator-1-keys:/keys
+    networks:
+      - blueblocks-testnet
+
+  validator-2:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile.validator
+    container_name: blueblocks-testnet-validator-2
+    restart: unless-stopped
+    depends_on:
+      node-2:
+        condition: service_healthy
+    ports:
+      - "7778:7777"
+    environment:
+      - VALIDATOR_DATA_DIR=/data
+      - VALIDATOR_PORT=7777
+      - VALIDATOR_TYPE=standard
+      - VALIDATOR_RPC=http://node-2:8080
+      - VALIDATOR_STAKE=25000
+      - VALIDATOR_ID=validator-2
+    volumes:
+      - testnet-validator-2-data:/data
+      - testnet-validator-2-keys:/keys
+    networks:
+      - blueblocks-testnet
+
+  validator-3:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile.validator
+    container_name: blueblocks-testnet-validator-3
+    restart: unless-stopped
+    depends_on:
+      node-3:
+        condition: service_healthy
+    ports:
+      - "7779:7777"
+    environment:
+      - VALIDATOR_DATA_DIR=/data
+      - VALIDATOR_PORT=7777
+      - VALIDATOR_TYPE=standard
+      - VALIDATOR_RPC=http://node-3:8080
+      - VALIDATOR_STAKE=25000
+      - VALIDATOR_ID=validator-3
+    volumes:
+      - testnet-validator-3-data:/data
+      - testnet-validator-3-keys:/keys
+    networks:
+      - blueblocks-testnet
+
+  # Healthcare Validator (requires NPI verification - disabled in testnet)
+  validator-healthcare:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile.validator
+    container_name: blueblocks-testnet-validator-healthcare
+    restart: unless-stopped
+    depends_on:
+      node-1:
+        condition: service_healthy
+    ports:
+      - "7780:7777"
+    environment:
+      - VALIDATOR_DATA_DIR=/data
+      - VALIDATOR_PORT=7777
+      - VALIDATOR_TYPE=healthcare
+      - VALIDATOR_RPC=http://node-1:8080
+      - VALIDATOR_STAKE=50000
+      - VALIDATOR_ID=validator-healthcare
+      - VALIDATOR_NPI=1234567890
+    volumes:
+      - testnet-validator-hc-data:/data
+      - testnet-validator-hc-keys:/keys
+    networks:
+      - blueblocks-testnet
+
+  # ============================================
+  # MINERS
+  # ============================================
+
+  miner-1:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile.miner
+    container_name: blueblocks-testnet-miner-1
+    restart: unless-stopped
+    depends_on:
+      node-1:
+        condition: service_healthy
+    environment:
+      - MINER_DATA_DIR=/data
+      - MINER_WORKERS=4
+      - MINER_DIFFICULTY=4
+      - MINER_REWARD=50000000
+      - MINER_NODE_RPC=http://node-1:8080
+      - MINER_TREASURY=${TESTNET_TREASURY_ADDRESS}
+    volumes:
+      - testnet-miner-1-data:/data
+    networks:
+      - blueblocks-testnet
+
+  miner-2:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile.miner
+    container_name: blueblocks-testnet-miner-2
+    restart: unless-stopped
+    depends_on:
+      node-2:
+        condition: service_healthy
+    environment:
+      - MINER_DATA_DIR=/data
+      - MINER_WORKERS=4
+      - MINER_DIFFICULTY=4
+      - MINER_REWARD=50000000
+      - MINER_NODE_RPC=http://node-2:8080
+      - MINER_TREASURY=${TESTNET_TREASURY_ADDRESS}
+    volumes:
+      - testnet-miner-2-data:/data
+    networks:
+      - blueblocks-testnet
+
+  # ============================================
+  # TREASURY (Ethereum Bridge - Optional)
+  # ============================================
+
+  treasury:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile.treasury
+    container_name: blueblocks-testnet-treasury
+    restart: unless-stopped
+    depends_on:
+      node-1:
+        condition: service_healthy
+    environment:
+      - TREASURY_DATA_DIR=/data
+      - TREASURY_BB_RPC=http://node-1:8080
+      - TREASURY_ETH_RPC=${TESTNET_ETH_RPC:-https://sepolia.infura.io/v3/YOUR_KEY}
+      - TREASURY_CONTRACT=${TESTNET_TOKEN_SALE_CONTRACT}
+      - TREASURY_START_BLOCK=${TESTNET_ETH_START_BLOCK:-0}
+    volumes:
+      - testnet-treasury-data:/data
+      - testnet-treasury-keys:/keys
+    networks:
+      - blueblocks-testnet
+    profiles:
+      - treasury
+
+  # ============================================
+  # INDEXER & DATABASE
+  # ============================================
+
+  timescaledb:
+    image: timescale/timescaledb:latest-pg15
+    container_name: blueblocks-testnet-timescaledb
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=blueblocks
+      - POSTGRES_PASSWORD=${TESTNET_DB_PASSWORD:-testnet_password}
+      - POSTGRES_DB=blueblocks_indexer
+    volumes:
+      - testnet-timescaledb-data:/var/lib/postgresql/data
+      - ../configs/testnet/init-db.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - blueblocks-testnet
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U blueblocks"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  indexer:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile.indexer
+    container_name: blueblocks-testnet-indexer
+    restart: unless-stopped
+    depends_on:
+      node-1:
+        condition: service_healthy
+      timescaledb:
+        condition: service_healthy
+    environment:
+      - INDEXER_DATA_DIR=/data
+      - INDEXER_DB_HOST=timescaledb
+      - INDEXER_DB_PORT=5432
+      - INDEXER_DB_NAME=blueblocks_indexer
+      - INDEXER_DB_USER=blueblocks
+      - INDEXER_DB_PASSWORD=${TESTNET_DB_PASSWORD:-testnet_password}
+      - INDEXER_NODE_RPC=http://node-1:8080
+    volumes:
+      - testnet-indexer-data:/data
+    networks:
+      - blueblocks-testnet
+
+  # ============================================
+  # MONITORING (Optional)
+  # ============================================
+
+  prometheus:
+    image: prom/prometheus:v2.47.0
+    container_name: blueblocks-testnet-prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ../configs/testnet/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - testnet-prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.enable-lifecycle'
+    networks:
+      - blueblocks-testnet
+    profiles:
+      - monitoring
+
+  grafana:
+    image: grafana/grafana:10.1.0
+    container_name: blueblocks-testnet-grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=${TESTNET_GRAFANA_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - testnet-grafana-data:/var/lib/grafana
+      - ../configs/testnet/grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on:
+      - prometheus
+    networks:
+      - blueblocks-testnet
+    profiles:
+      - monitoring
+
+networks:
+  blueblocks-testnet:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.29.0.0/16
+
+volumes:
+  # Node volumes
+  testnet-node-1-data:
+  testnet-node-2-data:
+  testnet-node-3-data:
+  # Validator volumes
+  testnet-validator-1-data:
+  testnet-validator-1-keys:
+  testnet-validator-2-data:
+  testnet-validator-2-keys:
+  testnet-validator-3-data:
+  testnet-validator-3-keys:
+  testnet-validator-hc-data:
+  testnet-validator-hc-keys:
+  # Miner volumes
+  testnet-miner-1-data:
+  testnet-miner-2-data:
+  # Treasury volumes
+  testnet-treasury-data:
+  testnet-treasury-keys:
+  # Database volumes
+  testnet-timescaledb-data:
+  testnet-indexer-data:
+  # Monitoring volumes
+  testnet-prometheus-data:
+  testnet-grafana-data:

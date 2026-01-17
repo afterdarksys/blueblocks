@@ -1,0 +1,47 @@
+# BlueBlocks Miner Dockerfile
+# Runs the mining daemon for block production
+
+FROM golang:1.24-alpine AS builder
+
+# Install build dependencies
+RUN apk add --no-cache git make gcc musl-dev
+
+WORKDIR /build
+
+# Copy go mod files first for better caching
+COPY preapproved-implementations/go.mod preapproved-implementations/go.sum ./
+RUN go mod download
+
+# Copy source code
+COPY preapproved-implementations/ .
+
+# Build the miner daemon
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /bin/blueblocks-miner ./cmd/blueblocks-miner
+
+# Runtime image
+FROM alpine:3.19
+
+RUN apk add --no-cache ca-certificates tzdata
+
+# Create non-root user
+RUN addgroup -S blueblocks && adduser -S blueblocks -G blueblocks
+
+# Copy binary
+COPY --from=builder /bin/blueblocks-miner /usr/local/bin/
+
+# Create data directories
+RUN mkdir -p /data /keys && chown -R blueblocks:blueblocks /data /keys
+
+USER blueblocks
+
+WORKDIR /data
+
+# Default environment variables
+ENV MINER_DATA_DIR=/data
+ENV MINER_WORKERS=4
+ENV MINER_DIFFICULTY=4
+ENV MINER_REWARD=50000000
+ENV MINER_TREASURY=
+
+ENTRYPOINT ["blueblocks-miner"]
+CMD ["--data-dir", "/data", "--workers", "4", "--difficulty", "4"]

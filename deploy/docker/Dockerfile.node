@@ -1,0 +1,55 @@
+# BlueBlocks Node Daemon Dockerfile
+# Runs the afterblockd HTTP API server
+
+FROM golang:1.24-alpine AS builder
+
+# Install build dependencies
+RUN apk add --no-cache git make gcc musl-dev
+
+WORKDIR /build
+
+# Copy go mod files first for better caching
+COPY preapproved-implementations/go.mod preapproved-implementations/go.sum ./
+RUN go mod download
+
+# Copy source code
+COPY preapproved-implementations/ .
+
+# Build the node daemon
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /bin/afterblockd ./daemons/afterblockd
+
+# Build the CLI tool
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /bin/bblks ./cmd/bblks
+
+# Runtime image
+FROM alpine:3.19
+
+RUN apk add --no-cache ca-certificates tzdata
+
+# Create non-root user
+RUN addgroup -S blueblocks && adduser -S blueblocks -G blueblocks
+
+# Copy binaries
+COPY --from=builder /bin/afterblockd /usr/local/bin/
+COPY --from=builder /bin/bblks /usr/local/bin/
+
+# Create data directories
+RUN mkdir -p /data /config && chown -R blueblocks:blueblocks /data /config
+
+USER blueblocks
+
+WORKDIR /data
+
+# Default environment variables
+ENV BLUEBLOCKS_DATA_DIR=/data
+ENV BLUEBLOCKS_LISTEN=0.0.0.0:8080
+ENV BLUEBLOCKS_CHAIN_ID=blueblocks-devnet
+
+EXPOSE 8080
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD wget -qO- http://localhost:8080/health || exit 1
+
+ENTRYPOINT ["afterblockd"]
+CMD ["--data", "/data", "--listen", "0.0.0.0:8080"]

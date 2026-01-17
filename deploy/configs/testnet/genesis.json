@@ -1,0 +1,77 @@
+{
+  "chain_id": "blueblocks-testnet",
+  "genesis_time": "2024-01-01T00:00:00Z",
+  "initial_height": 0,
+  "consensus_params": {
+    "block": {
+      "max_bytes": "2097152",
+      "max_gas": "50000000",
+      "time_iota_ms": "1000"
+    },
+    "evidence": {
+      "max_age_num_blocks": "100000",
+      "max_age_duration": "172800000000000"
+    },
+    "validator": {
+      "min_stake": "25000",
+      "max_validators": "100",
+      "slash_fraction": "0.05",
+      "downtime_jail_duration": "600000000000"
+    }
+  },
+  "app_state": {
+    "accounts": [
+      {
+        "address": "bb0000000000000000000000000000000000000001",
+        "balance": "5000000000000000",
+        "type": "treasury",
+        "label": "TestNet Treasury"
+      },
+      {
+        "address": "bb0000000000000000000000000000000000000002",
+        "balance": "500000000000",
+        "type": "faucet",
+        "label": "TestNet Faucet"
+      },
+      {
+        "address": "bb0000000000000000000000000000000000000003",
+        "balance": "100000000000",
+        "type": "reserve",
+        "label": "TestNet Reserve"
+      }
+    ],
+    "validators": [
+      {
+        "address": "bbval000000000000000000000000000000000001",
+        "pub_key": "",
+        "power": "10000",
+        "name": "TestNet Genesis Validator 1",
+        "type": "standard"
+      },
+      {
+        "address": "bbval000000000000000000000000000000000002",
+        "pub_key": "",
+        "power": "10000",
+        "name": "TestNet Genesis Validator 2",
+        "type": "standard"
+      },
+      {
+        "address": "bbval000000000000000000000000000000000003",
+        "pub_key": "",
+        "power": "10000",
+        "name": "TestNet Genesis Validator 3",
+        "type": "standard"
+      }
+    ],
+    "contracts": [],
+    "settings": {
+      "block_reward": "50000000",
+      "min_gas_price": "10",
+      "max_contract_size": "131072",
+      "faucet_enabled": true,
+      "faucet_amount": "100000000",
+      "faucet_cooldown_seconds": 300,
+      "healthcare_npi_verification": false
+    }
+  }
+}

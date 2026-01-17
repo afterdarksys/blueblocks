@@ -1,0 +1,49 @@
+# BlueBlocks Indexer Dockerfile
+# Runs the block indexer with TimescaleDB support
+
+FROM golang:1.24-alpine AS builder
+
+# Install build dependencies
+RUN apk add --no-cache git make gcc musl-dev
+
+WORKDIR /build
+
+# Copy go mod files first for better caching
+COPY preapproved-implementations/go.mod preapproved-implementations/go.sum ./
+RUN go mod download
+
+# Copy source code
+COPY preapproved-implementations/ .
+
+# Build the indexer (part of the main node with indexer mode)
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /bin/afterblockd ./daemons/afterblockd
+
+# Runtime image
+FROM alpine:3.19
+
+RUN apk add --no-cache ca-certificates tzdata postgresql-client
+
+# Create non-root user
+RUN addgroup -S blueblocks && adduser -S blueblocks -G blueblocks
+
+# Copy binary
+COPY --from=builder /bin/afterblockd /usr/local/bin/
+
+# Create data directories
+RUN mkdir -p /data && chown -R blueblocks:blueblocks /data
+
+USER blueblocks
+
+WORKDIR /data
+
+# Default environment variables
+ENV INDEXER_DATA_DIR=/data
+ENV INDEXER_DB_HOST=timescaledb
+ENV INDEXER_DB_PORT=5432
+ENV INDEXER_DB_NAME=blueblocks_indexer
+ENV INDEXER_DB_USER=blueblocks
+ENV INDEXER_DB_PASSWORD=
+ENV INDEXER_NODE_RPC=http://node:8080
+
+ENTRYPOINT ["afterblockd"]
+CMD ["--data", "/data", "--indexer-mode", "--db-host", "timescaledb"]

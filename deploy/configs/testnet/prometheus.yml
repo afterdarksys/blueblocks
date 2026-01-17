@@ -1,0 +1,76 @@
+# BlueBlocks TestNet Prometheus Configuration
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: 'blueblocks-testnet'
+
+# Alerting configuration (optional)
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []
+
+# Rule files
+rule_files: []
+
+# Scrape configurations
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # BlueBlocks Nodes
+  - job_name: 'blueblocks-nodes'
+    static_configs:
+      - targets:
+          - 'node-1:8080'
+          - 'node-2:8080'
+          - 'node-3:8080'
+        labels:
+          network: 'testnet'
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  # BlueBlocks Validators
+  - job_name: 'blueblocks-validators'
+    static_configs:
+      - targets:
+          - 'validator-1:7777'
+          - 'validator-2:7777'
+          - 'validator-3:7777'
+          - 'validator-healthcare:7777'
+        labels:
+          network: 'testnet'
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  # BlueBlocks Miners
+  - job_name: 'blueblocks-miners'
+    static_configs:
+      - targets:
+          - 'miner-1:9100'
+          - 'miner-2:9100'
+        labels:
+          network: 'testnet'
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # TimescaleDB (via postgres_exporter if deployed)
+  - job_name: 'timescaledb'
+    static_configs:
+      - targets: ['timescaledb:9187']
+        labels:
+          network: 'testnet'
+    scrape_interval: 30s
+
+  # Block Explorer API
+  - job_name: 'explorer-api'
+    static_configs:
+      - targets: ['explorer-api:3001']
+        labels:
+          network: 'testnet'
+    metrics_path: '/metrics'
+    scrape_interval: 15s
