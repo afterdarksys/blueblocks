@@ -1,0 +1,15 @@
+{
+  "comment": "Coinbase deposit addresses - COPY TO coinbase.json and add real addresses",
+  "usdc_address": "0x0000000000000000000000000000000000000000",
+  "eth_address": "0x0000000000000000000000000000000000000000",
+  "setup_instructions": [
+    "1. Create Coinbase account (or use existing)",
+    "2. Complete KYC/AML verification",
+    "3. Navigate to Portfolio → USDC → Deposit",
+    "4. Copy the Ethereum mainnet deposit address",
+    "5. Navigate to Portfolio → ETH → Deposit",
+    "6. Copy the Ethereum mainnet deposit address",
+    "7. Paste addresses above and save as coinbase.json",
+    "8. NEVER commit coinbase.json to git!"
+  ]
+}

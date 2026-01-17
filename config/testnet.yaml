@@ -1,0 +1,96 @@
+# BlueBlocks Test Network Configuration
+# ======================================
+# Use this configuration for testnet deployment
+
+network: testnet
+chain_id: blueblocks-testnet
+
+# Node configuration
+node:
+  data_dir: /var/lib/blueblocks/testnet
+  log_level: info
+  log_format: json
+
+# RPC API configuration
+rpc:
+  enabled: true
+  host: 0.0.0.0
+  port: 8080
+  cors_allowed_origins:
+    - "https://testnet.blueblocks.io"
+    - "https://explorer.testnet.blueblocks.io"
+  max_connections: 500
+  timeout: 30s
+  rate_limit:
+    enabled: true
+    requests_per_second: 100
+    burst: 200
+
+# P2P network configuration
+p2p:
+  enabled: true
+  host: 0.0.0.0
+  port: 26656
+  max_peers: 50
+  seeds:
+    - "seed1.testnet.blueblocks.io:26656"
+    - "seed2.testnet.blueblocks.io:26656"
+  persistent_peers: []
+  external_address: ""  # Set to your public IP:port
+
+# Consensus configuration
+consensus:
+  block_time: 5s
+  timeout_propose: 3s
+  timeout_prevote: 1s
+  timeout_precommit: 1s
+  timeout_commit: 5s
+  min_validators: 4
+  max_validators: 21
+
+# Mining configuration
+mining:
+  enabled: false  # Use validators instead
+  workers: 4
+  difficulty: 4
+  coinbase: ""
+
+# Database configuration
+database:
+  backend: postgres
+  host: localhost
+  port: 5432
+  name: blueblocks_testnet
+  user: blueblocks
+  password: ${POSTGRES_PASSWORD}
+  ssl_mode: require
+  max_connections: 50
+  cache_size: 512  # MB
+
+# Metrics configuration
+metrics:
+  enabled: true
+  prometheus_port: 9090
+  prometheus_path: /metrics
+
+# Healthcare/HIPAA configuration
+healthcare:
+  hipaa_audit: true
+  phi_encryption: true
+  audit_log_path: /var/log/blueblocks/hipaa_audit.log
+  encryption_algorithm: AES-256-GCM
+  audit_retention_days: 2555  # 7 years per HIPAA
+
+# IPFS configuration
+ipfs:
+  enabled: true
+  api_url: https://ipfs.testnet.blueblocks.io
+  gateway_url: https://gateway.testnet.blueblocks.io
+  pin_records: true
+
+# Testnet features
+testnet:
+  enable_faucet: true
+  faucet_amount: 1000
+  faucet_cooldown: 24h
+  max_faucet_per_day: 10000

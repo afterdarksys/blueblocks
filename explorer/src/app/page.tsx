@@ -56,8 +56,12 @@ export default function Home() {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="card p-8 text-center">
-          <div className="text-red-500 mb-4">
-            <Activity className="w-12 h-12 mx-auto" />
+          <div className="mb-4">
+            <img
+              src="/images/mascot/blubee_06_disconnect.jpg"
+              alt="BluBee disconnecting the internet"
+              className="w-48 h-48 mx-auto rounded-2xl object-cover"
+            />
           </div>
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
             Connection Error

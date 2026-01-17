@@ -1,0 +1,48 @@
+[Unit]
+Description=BlueBlocks Validator Node
+Documentation=https://github.com/afterdarksys/blueblocks
+After=network-online.target blueblocks-node.service
+Wants=network-online.target
+PartOf=blueblocks-node.service
+
+[Service]
+Type=simple
+User=blueblocks
+Group=blueblocks
+WorkingDirectory=/var/lib/blueblocks/validator
+
+ExecStartPre=/usr/bin/install -d -m 0750 -o blueblocks -g blueblocks /var/lib/blueblocks/validator
+
+ExecStart=/usr/local/bin/bblks-validator \
+    --config /etc/blueblocks/validator.yaml \
+    --data-dir /var/lib/blueblocks/validator \
+    --key /etc/blueblocks/keys/validator.json \
+    --rpc http://localhost:8080
+
+ExecReload=/bin/kill -HUP $MAINPID
+
+Restart=always
+RestartSec=10
+TimeoutStartSec=60
+TimeoutStopSec=30
+
+# Resource limits
+LimitNOFILE=65535
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ReadWritePaths=/var/lib/blueblocks/validator /var/log/blueblocks
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=blueblocks-validator
+
+[Install]
+WantedBy=multi-user.target

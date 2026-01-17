@@ -1,0 +1,52 @@
+[Unit]
+Description=BlueBlocks Treasury Listener
+Documentation=https://github.com/afterdarksys/blueblocks
+After=network-online.target blueblocks-node.service
+Wants=network-online.target
+PartOf=blueblocks-node.service
+
+[Service]
+Type=simple
+User=blueblocks
+Group=blueblocks
+WorkingDirectory=/var/lib/blueblocks/treasury
+
+ExecStartPre=/usr/bin/install -d -m 0750 -o blueblocks -g blueblocks /var/lib/blueblocks/treasury
+
+ExecStart=/usr/local/bin/bblks-treasury \
+    --bb-rpc http://localhost:8080 \
+    --eth-rpc ${ETH_RPC_URL} \
+    --contract ${TOKEN_SALE_CONTRACT} \
+    --data-dir /var/lib/blueblocks/treasury \
+    --key /etc/blueblocks/keys/treasury.json
+
+ExecReload=/bin/kill -HUP $MAINPID
+
+Restart=always
+RestartSec=30
+TimeoutStartSec=60
+TimeoutStopSec=30
+
+# Environment file for secrets
+EnvironmentFile=-/etc/blueblocks/treasury.env
+
+# Resource limits
+LimitNOFILE=65535
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ReadWritePaths=/var/lib/blueblocks/treasury /var/log/blueblocks
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=blueblocks-treasury
+
+[Install]
+WantedBy=multi-user.target

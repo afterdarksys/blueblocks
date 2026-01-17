@@ -1,0 +1,146 @@
+# BlueBlocks Main Network Configuration
+# ======================================
+# PRODUCTION CONFIGURATION - USE WITH EXTREME CARE
+
+network: mainnet
+chain_id: blueblocks-mainnet
+
+# Node configuration
+node:
+  data_dir: /var/lib/blueblocks/mainnet
+  log_level: warn  # Reduced logging for production
+  log_format: json
+
+# RPC API configuration
+rpc:
+  enabled: true
+  host: 127.0.0.1  # Bind to localhost only, use reverse proxy
+  port: 8080
+  cors_allowed_origins:
+    - "https://blueblocks.io"
+    - "https://explorer.blueblocks.io"
+    - "https://app.blueblocks.io"
+  max_connections: 1000
+  timeout: 30s
+  rate_limit:
+    enabled: true
+    requests_per_second: 50
+    burst: 100
+    whitelist:
+      - "10.0.0.0/8"  # Internal network
+
+# P2P network configuration
+p2p:
+  enabled: true
+  host: 0.0.0.0
+  port: 26656
+  max_peers: 100
+  seeds:
+    - "seed1.blueblocks.io:26656"
+    - "seed2.blueblocks.io:26656"
+    - "seed3.blueblocks.io:26656"
+  persistent_peers: []
+  external_address: ""  # MUST be set for validators
+  pex: true  # Peer exchange
+  seed_mode: false
+  private_peer_ids: []
+  addr_book_strict: true
+
+# Consensus configuration
+consensus:
+  block_time: 10s
+  timeout_propose: 3s
+  timeout_prevote: 1s
+  timeout_precommit: 1s
+  timeout_commit: 10s
+  min_validators: 7
+  max_validators: 100
+  skip_timeout_commit: false
+  create_empty_blocks: true
+  create_empty_blocks_interval: 60s
+
+# Mining configuration (disabled for mainnet - use validators)
+mining:
+  enabled: false
+
+# Database configuration
+database:
+  backend: postgres
+  host: ${POSTGRES_HOST}
+  port: 5432
+  name: blueblocks_mainnet
+  user: blueblocks
+  password: ${POSTGRES_PASSWORD}
+  ssl_mode: verify-full
+  ssl_cert: /etc/blueblocks/certs/client.crt
+  ssl_key: /etc/blueblocks/certs/client.key
+  ssl_ca: /etc/blueblocks/certs/ca.crt
+  max_connections: 100
+  max_idle_connections: 25
+  connection_lifetime: 1h
+  cache_size: 2048  # MB
+
+# Metrics configuration
+metrics:
+  enabled: true
+  prometheus_port: 9090
+  prometheus_path: /metrics
+  namespace: blueblocks
+  subsystem: mainnet
+
+# Healthcare/HIPAA configuration
+healthcare:
+  hipaa_audit: true
+  phi_encryption: true
+  audit_log_path: /var/log/blueblocks/hipaa_audit.log
+  encryption_algorithm: AES-256-GCM
+  audit_retention_days: 2555  # 7 years per HIPAA
+  breach_notification_email: security@blueblocks.io
+  baa_required: true
+
+# IPFS configuration
+ipfs:
+  enabled: true
+  api_url: https://ipfs.blueblocks.io
+  gateway_url: https://gateway.blueblocks.io
+  pin_records: true
+  cluster_enabled: true
+
+# TLS configuration
+tls:
+  enabled: true
+  cert_file: /etc/blueblocks/certs/server.crt
+  key_file: /etc/blueblocks/certs/server.key
+  ca_file: /etc/blueblocks/certs/ca.crt
+  client_auth: require  # Mutual TLS for validators
+
+# Backup configuration
+backup:
+  enabled: true
+  schedule: "0 */6 * * *"  # Every 6 hours
+  retention_days: 30
+  destination: s3://blueblocks-backups/mainnet/
+  encryption: true
+
+# Alerting configuration
+alerting:
+  enabled: true
+  webhook_url: ${ALERT_WEBHOOK_URL}
+  pagerduty_key: ${PAGERDUTY_KEY}
+  critical_alerts:
+    - consensus_failure
+    - block_production_stopped
+    - validator_slashing
+    - database_connection_lost
+  warning_alerts:
+    - high_memory_usage
+    - slow_block_time
+    - peer_count_low
+
+# Security configuration
+security:
+  max_request_body: 1MB
+  enable_request_logging: true
+  block_suspicious_ips: true
+  ddos_protection: true
+  rate_limit_by_ip: true

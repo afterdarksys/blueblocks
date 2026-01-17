@@ -60,6 +60,12 @@ export default function RootLayout({
                   <a href="/contracts" className="text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white text-sm font-medium">
                     Contracts
                   </a>
+                  <a href="/about" className="text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white text-sm font-medium">
+                    About
+                  </a>
+                  <a href="/blubee" className="text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white text-sm font-medium flex items-center">
+                    <span className="mr-1">🐱</span> BluBee
+                  </a>
                   <a href="/faucet" className="px-3 py-1.5 text-sm font-medium text-white bg-blueblocks-600 hover:bg-blueblocks-700 rounded-lg">
                     Faucet
                   </a>

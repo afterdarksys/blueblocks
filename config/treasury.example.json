@@ -1,0 +1,28 @@
+{
+  "comment": "Treasury configuration - COPY TO treasury.json and add real values",
+  "ethereum": {
+    "rpc_url": "https://mainnet.infura.io/v3/YOUR_API_KEY_HERE",
+    "token_sale_contract": "0x0000000000000000000000000000000000000000",
+    "start_block": 0,
+    "confirmation_blocks": 12
+  },
+  "blueblocks": {
+    "rpc_url": "http://localhost:8080",
+    "treasury_address": "bb0000000000000000000000000000000000000000",
+    "treasury_key_path": "./keys/treasury.json"
+  },
+  "polling": {
+    "interval_seconds": 12,
+    "batch_size": 100
+  },
+  "setup_instructions": [
+    "1. Get Infura API key from https://infura.io",
+    "2. Deploy BlueblocksTokenSale contract to Ethereum",
+    "3. Update token_sale_contract with deployed address",
+    "4. Generate treasury keypair: bblks login create",
+    "5. Fund treasury wallet with BBT tokens",
+    "6. Update treasury_address and treasury_key_path",
+    "7. Save as treasury.json",
+    "8. Start treasury listener: bblks-treasury --config config/treasury.json"
+  ]
+}

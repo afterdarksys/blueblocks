@@ -1,0 +1,53 @@
+[Unit]
+Description=BlueBlocks Healthcare Blockchain Node
+Documentation=https://github.com/afterdarksys/blueblocks
+After=network-online.target postgresql.service
+Wants=network-online.target
+Requires=network-online.target
+
+[Service]
+Type=simple
+User=blueblocks
+Group=blueblocks
+WorkingDirectory=/var/lib/blueblocks
+
+ExecStartPre=/usr/bin/install -d -m 0750 -o blueblocks -g blueblocks /var/lib/blueblocks
+ExecStartPre=/usr/bin/install -d -m 0750 -o blueblocks -g blueblocks /var/log/blueblocks
+
+ExecStart=/usr/local/bin/bblks server start \
+    --config /etc/blueblocks/node.yaml \
+    --data-dir /var/lib/blueblocks \
+    --log-file /var/log/blueblocks/node.log
+
+ExecReload=/bin/kill -HUP $MAINPID
+
+Restart=always
+RestartSec=10
+TimeoutStartSec=120
+TimeoutStopSec=30
+
+# Resource limits
+LimitNOFILE=65535
+LimitNPROC=65535
+MemoryMax=4G
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+ReadWritePaths=/var/lib/blueblocks /var/log/blueblocks
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=blueblocks-node
+
+[Install]
+WantedBy=multi-user.target
